@@ -42,6 +42,8 @@ dependencies:
   string_similarity: ^2.1.1
   flutter_localizations:
     sdk: flutter
+  google_mlkit_text_recognition: ^0.15.1
+  image_picker: ^1.2.1
 
 dev_dependencies:
   flutter_test:

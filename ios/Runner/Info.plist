@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Fiş okuma işlemleri için kameraya izin vermeniz gerekmektedir.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Galeriden fiş veya fatura seçmek için izin vermeniz gerekmektedir.</string>
 </dict>
 </plist>
