@@ -86,7 +86,7 @@ class _RecipeCreateScreenState extends ConsumerState<RecipeCreateScreen> {
   Future<void> _saveRecipe() async {
     if (!_formKey.currentState!.validate()) return;
     if (_items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tasarım için en az 1 hammadde seçmelisiniz')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reçete için en az 1 hammadde seçmelisiniz')));
       return;
     }
 
@@ -96,22 +96,27 @@ class _RecipeCreateScreenState extends ConsumerState<RecipeCreateScreen> {
       return;
     }
 
-    final productMap = Product()
-      ..name = _nameCtrl.text.trim()
-      ..unit = _unitCtrl.text.trim();
+    try {
+      final productMap = Product()
+        ..name = _nameCtrl.text.trim()
+        ..unit = _unitCtrl.text.trim();
 
-    final recipeItemsToSave = _items.map((e) {
-      return RecipeItem()
-        ..ingredientId = e.ingredientId
-        ..amount = e.amount;
-    }).toList();
+      final recipeItemsToSave = _items.map((e) {
+        return RecipeItem()
+          ..ingredientId = e.ingredientId
+          ..amount = e.amount;
+      }).toList();
 
-    final service = await ref.read(productServiceProvider.future);
-    await service.saveProduct(productMap, recipeItemsToSave);
+      final service = await ref.read(productServiceProvider.future);
+      await service.saveProduct(productMap, recipeItemsToSave);
 
-    if (!mounted) return;
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reçete kaydedildi')));
+      if (!mounted) return;
+      Navigator.pop(context, true); // true dönerek işlem yapıldığını haber verelim
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reçete başarıyla kaydedildi')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Kaydetme hatası: $e'), backgroundColor: Colors.red));
+    }
   }
 
   @override
@@ -170,7 +175,9 @@ class _RecipeCreateScreenState extends ConsumerState<RecipeCreateScreen> {
                                 decoration: InputDecoration(labelText: 'Miktar (${item.unit})'),
                                 initialValue: item.amount > 0 ? item.amount.toString() : '',
                                 onChanged: (val) {
-                                  double parsed = double.tryParse(val) ?? 0.0;
+                                  // Türkçe klavye için virgülü noktaya çevirelim
+                                  final cleanVal = val.replaceAll(',', '.');
+                                  double parsed = double.tryParse(cleanVal) ?? 0.0;
                                   _items[index].amount = parsed;
                                 },
                               ),
