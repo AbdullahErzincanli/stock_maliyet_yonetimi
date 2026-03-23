@@ -20,6 +20,14 @@ class SalesListScreen extends ConsumerWidget {
         title: const Text('Satışlar ve Karlılık'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.add_shopping_cart),
+            tooltip: 'Satış Ekle',
+            onPressed: () async {
+              await Navigator.push(context, MaterialPageRoute(builder: (_) => const SaleCreateScreen()));
+              ref.invalidate(salesProvider);
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.filter_list),
             tooltip: 'Tarih Filtresi',
             onPressed: () {
@@ -111,20 +119,6 @@ class SalesListScreen extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, st) => Center(child: Text('Hata: $e')),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          debugPrint('[FAB] Satış Ekle butonuna basıldı');
-          try {
-            await Navigator.push(context, MaterialPageRoute(builder: (_) => const SaleCreateScreen()));
-            debugPrint('[FAB] SaleCreateScreen geri dönüldü');
-            ref.invalidate(salesProvider);
-          } catch (e, st) {
-            debugPrint('[FAB] HATA: $e\n$st');
-          }
-        },
-        icon: const Icon(Icons.add_shopping_cart),
-        label: const Text('Satış Ekle'),
       ),
     );
   }

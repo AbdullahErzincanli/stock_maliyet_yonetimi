@@ -29,7 +29,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          minimumSize: const Size.fromHeight(56), // Büyük tıklama alanı
+          minimumSize: const Size(64, 56), // Büyük tıklama alanı, ama esnek genişlik
           textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),

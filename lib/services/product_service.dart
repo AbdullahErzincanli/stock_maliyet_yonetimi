@@ -8,10 +8,13 @@ class ProductService {
 
   ProductService(this.isar);
 
-  // Yeni Ürün (Reçete) kaydet
+  // Yeni veya Var Olan Ürün (Reçete) kaydet
   Future<int> saveProduct(Product product, List<RecipeItem> recipeItems) async {
     return await isar.writeTxn(() async {
       int productId = await isar.products.put(product);
+      
+      // Güncelleme durumu için eski kalemleri sil
+      await isar.recipeItems.filter().productIdEqualTo(productId).deleteAll();
       
       for (var item in recipeItems) {
         item.productId = productId;

@@ -94,6 +94,12 @@ class _SaleCreateScreenState extends ConsumerState<SaleCreateScreen> {
             return const Center(child: Text('Öncelikle "Üretim" sekmesinden reçete (ürün) tasarlamalısınız.'));
           }
 
+          // Güncel listedeki eşleşen product'ı bul (ID bazlı)
+          if (_selectedProduct != null) {
+            final match = products.where((p) => p.id == _selectedProduct!.id);
+            _selectedProduct = match.isNotEmpty ? match.first : null;
+          }
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Form(

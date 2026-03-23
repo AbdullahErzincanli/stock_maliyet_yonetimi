@@ -37,7 +37,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               // Sadece daha önce ziyaret edilmiş veya şu an aktif olan
               // sekmeleri build et. Diğerleri boş SizedBox kalır.
               if (_initializedTabs.contains(i)) {
-                return _allScreens[i];
+                // Aktif olmayan sekmelerdeki Hero widget'larını devre dışı bırak
+                // (FloatingActionButton dahili Hero kullanır).
+                return HeroMode(
+                  enabled: i == _currentIndex,
+                  child: _allScreens[i],
+                );
               }
               return const SizedBox.shrink();
             }),

@@ -67,6 +67,14 @@ class ProductionEntryScreen extends ConsumerWidget {
         title: const Text('Üretim ve Reçeteler'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            tooltip: 'Yeni Reçete',
+            onPressed: () async {
+              await Navigator.push(context, MaterialPageRoute(builder: (_) => const RecipeCreateScreen()));
+              ref.invalidate(productsProvider);
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Yenile',
             onPressed: () => ref.invalidate(productsProvider),
@@ -86,7 +94,30 @@ class ProductionEntryScreen extends ConsumerWidget {
                 child: ListTile(
                   title: Text(prod.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
                   subtitle: Text('Birim: ${prod.unit}'),
-                  trailing: ProductCostWidget(productId: prod.id),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ProductCostWidget(productId: prod.id),
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        onPressed: () async {
+                          final service = await ref.read(productServiceProvider.future);
+                          final items = await service.getRecipeItemsForProduct(prod.id);
+                          if (!context.mounted) return;
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => RecipeCreateScreen(
+                                productToEdit: prod,
+                                itemsToEdit: items,
+                              ),
+                            ),
+                          );
+                          ref.invalidate(productsProvider);
+                        },
+                      ),
+                    ],
+                  ),
                   onTap: () => _showProduceDialog(context, ref, prod),
                 ),
               );
@@ -95,20 +126,6 @@ class ProductionEntryScreen extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, st) => Center(child: Text('Hata: $e')),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          debugPrint('[FAB] Yeni Reçete butonuna basıldı');
-          try {
-            await Navigator.push(context, MaterialPageRoute(builder: (_) => const RecipeCreateScreen()));
-            debugPrint('[FAB] RecipeCreateScreen geri dönüldü');
-            ref.invalidate(productsProvider);
-          } catch (e, st) {
-            debugPrint('[FAB] HATA: $e\n$st');
-          }
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Yeni Reçete'),
       ),
     );
   }
