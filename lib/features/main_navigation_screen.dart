@@ -28,44 +28,37 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: IndexedStack(
-            index: _currentIndex,
-            children: List.generate(_allScreens.length, (i) {
-              // Sadece daha önce ziyaret edilmiş veya şu an aktif olan
-              // sekmeleri build et. Diğerleri boş SizedBox kalır.
-              if (_initializedTabs.contains(i)) {
-                // Aktif olmayan sekmelerdeki Hero widget'larını devre dışı bırak
-                // (FloatingActionButton dahili Hero kullanır).
-                return HeroMode(
-                  enabled: i == _currentIndex,
-                  child: _allScreens[i],
-                );
-              }
-              return const SizedBox.shrink();
-            }),
-          ),
-        ),
-        NavigationBar(
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (index) {
-            setState(() {
-              _currentIndex = index;
-              _initializedTabs.add(index);
-            });
-          },
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.home), label: 'Özet'),
-            NavigationDestination(icon: Icon(Icons.inventory), label: 'Stok'),
-            NavigationDestination(icon: Icon(Icons.restaurant), label: 'Üretim'),
-            NavigationDestination(icon: Icon(Icons.point_of_sale), label: 'Satış'),
-            NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Rapor'),
-          ],
-        ),
-      ],
+    return Scaffold(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: List.generate(_allScreens.length, (i) {
+          if (_initializedTabs.contains(i)) {
+            return HeroMode(
+              enabled: i == _currentIndex,
+              child: _allScreens[i],
+            );
+          }
+          return const SizedBox.shrink();
+        }),
+      ),
+      bottomNavigationBar: NavigationBar(
+        height: 65, // Yüksekliği azalttık
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) {
+          setState(() {
+            _currentIndex = index;
+            _initializedTabs.add(index);
+          });
+        },
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home, size: 22), label: 'Özet'),
+          NavigationDestination(icon: Icon(Icons.inventory, size: 22), label: 'Stok'),
+          NavigationDestination(icon: Icon(Icons.restaurant, size: 22), label: 'Ürünler'),
+          NavigationDestination(icon: Icon(Icons.point_of_sale, size: 22), label: 'Satış'),
+          NavigationDestination(icon: Icon(Icons.bar_chart, size: 22), label: 'Rapor'),
+        ],
+      ),
     );
   }
 }

@@ -92,7 +92,7 @@ class SalesListScreen extends ConsumerWidget {
 
                         return Card(
                           child: ListTile(
-                            title: Text('$prodName (${sale.amount} adet)', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            title: Text('$prodName (${sale.amount} ${prod?.unit ?? ""})', style: const TextStyle(fontWeight: FontWeight.bold)),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [

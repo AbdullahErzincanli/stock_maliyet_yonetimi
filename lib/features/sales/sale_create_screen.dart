@@ -127,7 +127,7 @@ class _SaleCreateScreenState extends ConsumerState<SaleCreateScreen> {
                         child: TextFormField(
                           controller: _amountCtrl,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(labelText: 'Miktar (Adet/Kutu)'),
+                          decoration: InputDecoration(labelText: 'Miktar (${_selectedProduct?.unit ?? "Adet/Kutu"})'),
                           validator: (val) => val == null || val.isEmpty ? 'Gerekli' : null,
                         ),
                       ),

@@ -131,47 +131,32 @@ class ProductionEntryScreen extends ConsumerWidget {
   }
 }
 
-class ProductCostWidget extends ConsumerStatefulWidget {
+class ProductCostWidget extends ConsumerWidget {
   final int productId;
   const ProductCostWidget({super.key, required this.productId});
 
   @override
-  ConsumerState<ProductCostWidget> createState() => _ProductCostWidgetState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final costAsync = ref.watch(productCostProvider(productId));
 
-class _ProductCostWidgetState extends ConsumerState<ProductCostWidget> {
-  Future<double>? _costFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCost();
-  }
-
-  void _loadCost() {
-    _costFuture = ref.read(productServiceProvider.future).then(
-      (service) => service.calculateProductCost(widget.productId),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<double>(
-      future: _costFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2));
-        }
-        if (snapshot.hasError) {
-          return const Icon(Icons.error, color: Colors.red);
-        }
-        final cost = snapshot.data ?? 0.0;
+    return costAsync.when(
+      data: (cost) {
         return Text(
           'Maliyet:\n${cost.toStringAsFixed(2)} ₺',
           textAlign: TextAlign.right,
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         );
       },
+      loading: () => const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      error: (err, stack) => const Icon(Icons.error, color: Colors.red),
     );
   }
 }
