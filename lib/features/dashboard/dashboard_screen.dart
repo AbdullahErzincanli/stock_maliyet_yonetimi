@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../purchases/ocr_scan_screen.dart';
+import '../budget/budget_screen.dart';
 import '../../providers/sales_provider.dart';
 import '../../providers/stock_provider.dart';
 import '../../core/utils/unit_conversion.dart';
@@ -38,6 +39,19 @@ class DashboardScreen extends ConsumerWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                 foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetScreen()));
+              },
+              icon: const Icon(Icons.savings),
+              label: const Text('Hammadde Bütçesini Planla'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
                 padding: const EdgeInsets.symmetric(vertical: 20),
               ),
             ),
