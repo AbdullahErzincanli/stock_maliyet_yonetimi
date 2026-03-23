@@ -6,6 +6,7 @@ import '../../models/purchase_item.dart';
 import '../../services/ocr_service.dart';
 import '../../providers/purchase_provider.dart';
 import '../../providers/stock_provider.dart';
+import '../../providers/db_provider.dart';
 
 class OcrReviewScreen extends ConsumerStatefulWidget {
   final List<OcrParsedItem> parsedItems;
@@ -70,7 +71,29 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
       ..totalAmount = total;
 
     await purchaseService.savePurchaseAndProcessStock(purchase, itemsToSave);
-    
+
+    // --- OCR Öğrenme: Eşleşen isimleri aliases alanına kaydet ---
+    final isar = await ref.read(isarProvider.future);
+    for (var parsed in validItems) {
+      final ing = parsed.matchedIngredient!;
+      final rawName = parsed.suggestedName.trim().toLowerCase();
+      // Eğer fişteki isim, DB'deki isimle zaten aynıysa kaydetmeye gerek yok
+      if (rawName.isEmpty || rawName == ing.name.toLowerCase()) continue;
+      // Zaten aliases listesinde varsa ekleme
+      final currentAliases = ing.aliases ?? '';
+      final aliasList = currentAliases.isEmpty
+          ? <String>[]
+          : currentAliases.split(',').map((e) => e.trim().toLowerCase()).toList();
+      if (aliasList.contains(rawName)) continue;
+
+      // Yeni alias ekle
+      aliasList.add(rawName);
+      ing.aliases = aliasList.join(',');
+      await isar.writeTxn(() async {
+        await isar.ingredients.put(ing);
+      });
+    }
+
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Alışveriş kaydedildi ve stoklar güncellendi.')));
     ref.invalidate(ingredientsProvider);

@@ -4,6 +4,7 @@ import '../../providers/sales_provider.dart';
 import '../../providers/product_provider.dart';
 import 'package:intl/intl.dart';
 import 'sale_create_screen.dart';
+import 'sales_filter_screen.dart';
 
 class SalesListScreen extends ConsumerWidget {
   const SalesListScreen({super.key});
@@ -18,6 +19,13 @@ class SalesListScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Satışlar ve Karlılık'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            tooltip: 'Tarih Filtresi',
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const SalesFilterScreen()));
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.invalidate(salesProvider),

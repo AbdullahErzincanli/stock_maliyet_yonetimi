@@ -34,12 +34,16 @@ class _SaleCreateScreenState extends ConsumerState<SaleCreateScreen> {
     _priceCtrl.text = prod?.defaultSalePrice?.toString() ?? '';
 
     if (prod != null) {
-      final productService = await ref.read(productServiceProvider.future);
-      final cost = await productService.calculateProductCost(prod.id);
-      if (mounted) {
-        setState(() {
-          _currentEstimatedCost = cost;
-        });
+      try {
+        final productService = await ref.read(productServiceProvider.future);
+        final cost = await productService.calculateProductCost(prod.id);
+        if (mounted) {
+          setState(() {
+            _currentEstimatedCost = cost;
+          });
+        }
+      } catch (e) {
+        if (mounted) setState(() => _currentEstimatedCost = 0.0);
       }
     } else {
       setState(() => _currentEstimatedCost = 0.0);

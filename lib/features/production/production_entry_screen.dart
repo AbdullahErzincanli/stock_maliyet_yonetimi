@@ -108,16 +108,33 @@ class ProductionEntryScreen extends ConsumerWidget {
   }
 }
 
-class ProductCostWidget extends ConsumerWidget {
+class ProductCostWidget extends ConsumerStatefulWidget {
   final int productId;
   const ProductCostWidget({super.key, required this.productId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // productId değişirse Future builder tetiklenecek. 
-    // Daha optimize mimaride family provider kullanılabilir. 
+  ConsumerState<ProductCostWidget> createState() => _ProductCostWidgetState();
+}
+
+class _ProductCostWidgetState extends ConsumerState<ProductCostWidget> {
+  Future<double>? _costFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCost();
+  }
+
+  void _loadCost() {
+    _costFuture = ref.read(productServiceProvider.future).then(
+      (service) => service.calculateProductCost(widget.productId),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder<double>(
-      future: ref.read(productServiceProvider.future).then((service) => service.calculateProductCost(productId)),
+      future: _costFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2));

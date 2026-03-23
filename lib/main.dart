@@ -3,12 +3,17 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/theme/app_theme.dart';
+import 'core/db/isar_service.dart';
 import 'features/main_navigation_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('tr_TR', null);
-  
+
+  // Isar'ı uygulama açılmadan ÖNCE başlat (FFI bloke etmesin)
+  final isarService = IsarService();
+  await isarService.db;
+
   runApp(
     // Riverpod'in çalışması için ProviderScope sarmalıyız
     const ProviderScope(

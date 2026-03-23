@@ -43,7 +43,6 @@ class OcrService {
 
     final List<OcrParsedItem> result = [];
     final lines = text.split('\n');
-    final ingredientNames = availableIngredients.map((e) => e.name).toList();
 
     for (var line in lines) {
       line = line.trim();
@@ -67,12 +66,26 @@ class OcrService {
       double parsedPrice = _extractLargestNumber(line);
 
       // Veritabanı içindeki ürün isimleriyle bulanık (fuzzy) eşleştirme aranır
-      // (Eğer kullanıcının DB'sinde "Zeytinyağı" varsa fişteki "ZYTNYAGI" kelimesi eşleşebilir.)
-      final matchedName = FuzzyMatching.findBestMatch(candidateName, ingredientNames, threshold: 0.35);
+      // Aliases öğrenme verisini de dahil ediyoruz
+      // Her ingredient için [isim, alias1, alias2...] → aynı ingredient'e map'lenir
+      final Map<String, Ingredient> nameToIngredient = {};
+      for (var ing in availableIngredients) {
+        nameToIngredient[ing.name] = ing;
+        if (ing.aliases != null && ing.aliases!.isNotEmpty) {
+          for (var alias in ing.aliases!.split(',')) {
+            final trimmed = alias.trim();
+            if (trimmed.isNotEmpty) {
+              nameToIngredient[trimmed] = ing;
+            }
+          }
+        }
+      }
+      final allNames = nameToIngredient.keys.toList();
+      final matchedName = FuzzyMatching.findBestMatch(candidateName, allNames, threshold: 0.35);
       
       Ingredient? ingredient;
       if (matchedName != null) {
-        ingredient = availableIngredients.firstWhere((e) => e.name == matchedName);
+        ingredient = nameToIngredient[matchedName];
       }
 
       result.add(OcrParsedItem(

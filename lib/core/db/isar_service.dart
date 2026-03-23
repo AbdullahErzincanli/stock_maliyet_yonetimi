@@ -18,32 +18,34 @@ class IsarService {
   }
 
   Future<Isar> openDB() async {
-    if (Isar.instanceNames.isEmpty) {
-      final dir = await getApplicationDocumentsDirectory();
-      final isar = await Isar.open(
-        [
-          UnitDefinitionSchema,
-          IngredientSchema,
-          ProductSchema,
-          RecipeItemSchema,
-          SaleSchema,
-          PurchaseSchema,
-          PurchaseItemSchema,
-          BudgetSnapshotSchema,
-        ],
-        directory: dir.path,
-      );
-
-      // Seed data if empty
-      final count = await isar.unitDefinitions.count();
-      if (count == 0) {
-        await isar.writeTxn(() async {
-          await isar.unitDefinitions.putAll(SeedData.defaultUnits);
-        });
-      }
-
-      return isar;
+    final existingInstance = Isar.getInstance();
+    if (existingInstance != null) {
+      return existingInstance;
     }
-    return Future.value(Isar.getInstance());
+
+    final dir = await getApplicationDocumentsDirectory();
+    final isar = await Isar.open(
+      [
+        UnitDefinitionSchema,
+        IngredientSchema,
+        ProductSchema,
+        RecipeItemSchema,
+        SaleSchema,
+        PurchaseSchema,
+        PurchaseItemSchema,
+        BudgetSnapshotSchema,
+      ],
+      directory: dir.path,
+    );
+
+    // Seed data if empty
+    final count = await isar.unitDefinitions.count();
+    if (count == 0) {
+      await isar.writeTxn(() async {
+        await isar.unitDefinitions.putAll(SeedData.defaultUnits);
+      });
+    }
+
+    return isar;
   }
 }

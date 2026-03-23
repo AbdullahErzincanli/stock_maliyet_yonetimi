@@ -42,22 +42,28 @@ class _StockEditScreenState extends ConsumerState<StockEditScreen> {
   void _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final service = await ref.read(stockServiceProvider.future);
+    try {
+      final service = await ref.read(stockServiceProvider.future);
 
-    final item = widget.ingredient ?? Ingredient()
-      ..stockAmount = widget.ingredient?.stockAmount ?? 0.0
-      ..avgCost = widget.ingredient?.avgCost ?? 0.0
-      ..aliases = widget.ingredient?.aliases;
+      final item = widget.ingredient ?? Ingredient()
+        ..stockAmount = widget.ingredient?.stockAmount ?? 0.0
+        ..avgCost = widget.ingredient?.avgCost ?? 0.0
+        ..aliases = widget.ingredient?.aliases;
 
-    item.name = _nameCtrl.text.trim();
-    item.unit = _selectedBaseUnit;
-    item.minStockLevel = double.tryParse(_minStockCtrl.text) ?? 0.0;
+      item.name = _nameCtrl.text.trim();
+      item.unit = _selectedBaseUnit;
+      item.minStockLevel = double.tryParse(_minStockCtrl.text) ?? 0.0;
 
-    await service.addOrUpdateIngredient(item);
+      await service.addOrUpdateIngredient(item);
 
-    if (!mounted) return;
-    // ignore: use_build_context_synchronously
-    Navigator.pop(context);
+      if (!mounted) return;
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Kaydetme hatası: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   void _confirmDelete() {

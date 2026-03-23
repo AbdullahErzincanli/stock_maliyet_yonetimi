@@ -41,9 +41,26 @@ class _RecipeCreateScreenState extends ConsumerState<RecipeCreateScreen> {
   }
 
   Future<void> _openIngredientPicker() async {
-    final ingredients = await ref.read(ingredientsProvider.future);
+    List<Ingredient> ingredients;
+    try {
+      ingredients = await ref.read(ingredientsProvider.future);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Hammaddeler yüklenemedi: $e'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     if (!mounted) return;
-    
+
+    if (ingredients.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Henüz hammadde eklenmemiş. Önce "Stok" sekmesinden hammadde ekleyin.')),
+      );
+      return;
+    }
+
     final selectedIngredient = await showModalBottomSheet<Ingredient>(
       context: context,
       builder: (ctx) {
