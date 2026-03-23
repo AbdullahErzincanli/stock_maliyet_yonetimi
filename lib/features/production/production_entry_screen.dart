@@ -1,57 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/product_provider.dart';
-import '../../providers/production_provider.dart';
-import '../../providers/stock_provider.dart';
 import '../../models/product.dart';
 import 'recipe_create_screen.dart';
 
 class ProductionEntryScreen extends ConsumerWidget {
   const ProductionEntryScreen({super.key});
 
-  void _showProduceDialog(BuildContext context, WidgetRef ref, Product product) {
-    if (!context.mounted) return;
-    
-    final ctrl = TextEditingController();
+  void _showDeleteConfirmDialog(BuildContext context, WidgetRef ref, Product product) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('${product.name} Üretimi'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Üretilecek miktarı giriniz:'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: ctrl,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: 'Miktar (${product.unit})'),
-            ),
-          ],
-        ),
+        title: const Text('Reçeteyi Sil'),
+        content: Text('${product.name} reçetesini silmek istediğinize emin misiniz?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İPTAL')),
           TextButton(
             onPressed: () async {
-              final amount = double.tryParse(ctrl.text);
-              if (amount == null || amount <= 0) return;
-
               final navCtx = Navigator.of(ctx);
               final messenger = ScaffoldMessenger.of(context);
-              
               try {
-                final productionService = await ref.read(productionServiceProvider.future);
-                await productionService.recordProduction(product.id, amount);
-                
+                final service = await ref.read(productServiceProvider.future);
+                await service.deleteProduct(product.id);
                 navCtx.pop();
-                messenger.showSnackBar(const SnackBar(content: Text('Üretim kaydedildi ve hammaddelerden düşüldü.'), backgroundColor: Colors.green));
-                ref.invalidate(ingredientsProvider);
+                messenger.showSnackBar(const SnackBar(content: Text('Reçete başarıyla silindi.')));
+                ref.invalidate(productsProvider);
               } catch (e) {
                 navCtx.pop();
-                messenger.showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+                messenger.showSnackBar(SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red));
               }
             },
-            child: const Text('ÜRET/DÜŞ', style: TextStyle(fontWeight: FontWeight.bold)),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('SİL', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -116,9 +96,12 @@ class ProductionEntryScreen extends ConsumerWidget {
                           ref.invalidate(productsProvider);
                         },
                       ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _showDeleteConfirmDialog(context, ref, prod),
+                      ),
                     ],
                   ),
-                  onTap: () => _showProduceDialog(context, ref, prod),
                 ),
               );
             },

@@ -75,6 +75,20 @@ class UnitConversionService {
     };
   }
 
+  /// Maliyetleri en büyük birime göre formatlar (örn: gram maliyetini kg maliyetine çevirir)
+  static String formatCost(double baseCost, String baseUnit) {
+    var applicableUnits = _units.where((u) => u.baseUnit == baseUnit).toList()
+      ..sort((a, b) => b.toBaseRatio.compareTo(a.toBaseRatio));
+
+    if (applicableUnits.isNotEmpty) {
+      final targetUnit = applicableUnits.first; // En büyük birim (örn kg, lt)
+      double convertedCost = baseCost * targetUnit.toBaseRatio;
+      return '${convertedCost.toStringAsFixed(2)} ₺ / ${targetUnit.symbol}';
+    }
+
+    return '${baseCost.toStringAsFixed(2)} ₺ / $baseUnit';
+  }
+
   // Double sayılardaki gereksiz sondaki .0 kısımlarını temizleme
   static String _formatNumber(double n) {
     // n.toStringAsFixed(2); vb kullanılabilir ama .00 yerine düz basmak için regex:

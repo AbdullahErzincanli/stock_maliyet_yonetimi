@@ -112,7 +112,7 @@ class StockListScreen extends ConsumerWidget {
                                 fontWeight: FontWeight.bold,
                                 fontSize: 20)),
                         subtitle: Text(
-                          'Ort. Maliyet: ${item.avgCost.toStringAsFixed(2)} ₺ / ${item.unit}',
+                          'Ort. Maliyet: ${UnitConversionService.formatCost(item.avgCost, item.unit)}',
                           style: const TextStyle(fontSize: 16),
                         ),
                         trailing: Text(

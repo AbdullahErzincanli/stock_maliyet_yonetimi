@@ -19,7 +19,6 @@ class _SaleCreateScreenState extends ConsumerState<SaleCreateScreen> {
 
   Product? _selectedProduct;
   double _currentEstimatedCost = 0.0;
-  bool _autoProduce = true;
 
   @override
   void dispose() {
@@ -69,7 +68,7 @@ class _SaleCreateScreenState extends ConsumerState<SaleCreateScreen> {
         productId: _selectedProduct!.id,
         amount: amount,
         unitSalePrice: price,
-        autoProduce: _autoProduce,
+        autoProduce: true, // Her zaman stoktan düşsün
         note: _noteCtrl.text,
       );
 
@@ -148,16 +147,7 @@ class _SaleCreateScreenState extends ConsumerState<SaleCreateScreen> {
                     controller: _noteCtrl,
                     decoration: const InputDecoration(labelText: 'Not (Kime satıldı, açıklama vb.)'),
                   ),
-                  const SizedBox(height: 24),
-                  CheckboxListTile(
-                    title: const Text('Satarken stoklardan (hammaddelerden) malzemeleri de düş. (Otomatik Üret)'),
-                    subtitle: const Text('Bunu önceden sadece "Üret" dediyseniz kaldırın. Aksi takdirde malzemeyi iki defa düşer!'),
-                    value: _autoProduce,
-                    onChanged: (val) => setState(() => _autoProduce = val ?? false),
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _saveSale,
                     child: const Text('SATIŞI KAYDET'),
