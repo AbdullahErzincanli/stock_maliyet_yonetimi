@@ -40,6 +40,8 @@ dependencies:
   intl: ^0.20.2
   path_provider: ^2.1.5
   string_similarity: ^2.1.1
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:
