@@ -68,8 +68,14 @@ class StockListScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
-          await Navigator.push(context, MaterialPageRoute(builder: (_) => const StockEditScreen()));
-          ref.invalidate(ingredientsProvider);
+          debugPrint('[FAB] Yeni Hammadde butonuna basıldı');
+          try {
+            await Navigator.push(context, MaterialPageRoute(builder: (_) => const StockEditScreen()));
+            debugPrint('[FAB] StockEditScreen geri dönüldü');
+            ref.invalidate(ingredientsProvider);
+          } catch (e, st) {
+            debugPrint('[FAB] HATA: $e\n$st');
+          }
         },
         icon: const Icon(Icons.add),
         label: const Text('Yeni Hammadde'),

@@ -15,7 +15,10 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
+  // Hangi sekmelerin daha önce ziyaret edildiğini izle (tembel yükleme)
+  final Set<int> _initializedTabs = {0};
+
+  static const List<Widget> _allScreens = [
     DashboardScreen(),
     StockListScreen(),
     ProductionEntryScreen(),
@@ -25,14 +28,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Dış Scaffold kullanmıyoruz!
-    // Her alt ekranın kendi Scaffold'u var, FAB'ları engellenmez.
     return Column(
       children: [
         Expanded(
           child: IndexedStack(
             index: _currentIndex,
-            children: _screens,
+            children: List.generate(_allScreens.length, (i) {
+              // Sadece daha önce ziyaret edilmiş veya şu an aktif olan
+              // sekmeleri build et. Diğerleri boş SizedBox kalır.
+              if (_initializedTabs.contains(i)) {
+                return _allScreens[i];
+              }
+              return const SizedBox.shrink();
+            }),
           ),
         ),
         NavigationBar(
@@ -40,6 +48,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           onDestinationSelected: (index) {
             setState(() {
               _currentIndex = index;
+              _initializedTabs.add(index);
             });
           },
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,

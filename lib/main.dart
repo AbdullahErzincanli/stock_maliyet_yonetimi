@@ -10,12 +10,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('tr_TR', null);
 
-  // Isar'ı uygulama açılmadan ÖNCE başlat (FFI bloke etmesin)
+  // Isar'ı uygulama açılmadan ÖNCE başlat (splash screen arkasında)
   final isarService = IsarService();
   await isarService.db;
 
   runApp(
-    // Riverpod'in çalışması için ProviderScope sarmalıyız
     const ProviderScope(
       child: StokMaliyetApp(),
     ),

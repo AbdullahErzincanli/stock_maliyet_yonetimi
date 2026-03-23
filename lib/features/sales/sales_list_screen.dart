@@ -114,8 +114,14 @@ class SalesListScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
-          await Navigator.push(context, MaterialPageRoute(builder: (_) => const SaleCreateScreen()));
-          ref.invalidate(salesProvider);
+          debugPrint('[FAB] Satış Ekle butonuna basıldı');
+          try {
+            await Navigator.push(context, MaterialPageRoute(builder: (_) => const SaleCreateScreen()));
+            debugPrint('[FAB] SaleCreateScreen geri dönüldü');
+            ref.invalidate(salesProvider);
+          } catch (e, st) {
+            debugPrint('[FAB] HATA: $e\n$st');
+          }
         },
         icon: const Icon(Icons.add_shopping_cart),
         label: const Text('Satış Ekle'),

@@ -98,8 +98,14 @@ class ProductionEntryScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
-          await Navigator.push(context, MaterialPageRoute(builder: (_) => const RecipeCreateScreen()));
-          ref.invalidate(productsProvider);
+          debugPrint('[FAB] Yeni Reçete butonuna basıldı');
+          try {
+            await Navigator.push(context, MaterialPageRoute(builder: (_) => const RecipeCreateScreen()));
+            debugPrint('[FAB] RecipeCreateScreen geri dönüldü');
+            ref.invalidate(productsProvider);
+          } catch (e, st) {
+            debugPrint('[FAB] HATA: $e\n$st');
+          }
         },
         icon: const Icon(Icons.add),
         label: const Text('Yeni Reçete'),
