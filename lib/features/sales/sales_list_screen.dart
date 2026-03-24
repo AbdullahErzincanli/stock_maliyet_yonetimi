@@ -6,8 +6,60 @@ import 'package:intl/intl.dart';
 import 'sale_create_screen.dart';
 import 'sales_filter_screen.dart';
 
+import '../../providers/db_provider.dart';
+import '../../models/sale.dart';
+
 class SalesListScreen extends ConsumerWidget {
   const SalesListScreen({super.key});
+
+  void _showEditPriceDialog(BuildContext context, WidgetRef ref, Sale sale) {
+    final priceCtrl = TextEditingController(text: sale.unitSalePrice.toString());
+    final noteCtrl = TextEditingController(text: sale.note ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Satışı Düzenle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: priceCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Birim Fiyat (₺)'),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: noteCtrl,
+              decoration: const InputDecoration(labelText: 'Not'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal')),
+          ElevatedButton(
+            onPressed: () async {
+              final newPrice = double.tryParse(priceCtrl.text.replaceAll(',', '.')) ?? 0.0;
+              final isar = await ref.read(isarProvider.future);
+              
+              sale.unitSalePrice = newPrice;
+              sale.totalSalePrice = newPrice * sale.amount * sale.quantity;
+              sale.profit = sale.totalSalePrice - sale.totalCost;
+              sale.note = noteCtrl.text.trim();
+              
+              await isar.writeTxn(() async {
+                await isar.sales.put(sale);
+              });
+              
+              ref.invalidate(salesProvider);
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: const Text('Güncelle'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -105,6 +157,7 @@ class SalesListScreen extends ConsumerWidget {
                               '${isProfit ? "+" : ""}${sale.profit.toStringAsFixed(2)} ₺',
                               style: TextStyle(color: isProfit ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
                             ),
+                            onTap: () => _showEditPriceDialog(context, ref, sale),
                           ),
                         );
                       },
