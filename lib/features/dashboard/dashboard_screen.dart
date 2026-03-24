@@ -32,7 +32,13 @@ class DashboardScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: colorScheme.surfaceVariant.withOpacity(0.1),
       appBar: AppBar(
-        title: const Text('Özet', style: TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(
+          'Özet', 
+          style: TextStyle(
+            fontWeight: FontWeight.bold, // font weight bold da daha iyi durur
+            color: colorScheme.primary, // Tema ile uyumlu renk
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
