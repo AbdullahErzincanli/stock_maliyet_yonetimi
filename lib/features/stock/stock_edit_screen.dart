@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/ingredient.dart';
 import '../../providers/stock_provider.dart';
 import '../../core/db/seed_data.dart';
+import '../../core/utils/unit_conversion.dart';
 
 class StockEditScreen extends ConsumerStatefulWidget {
   final Ingredient? ingredient;
@@ -18,17 +19,27 @@ class _StockEditScreenState extends ConsumerState<StockEditScreen> {
   
   late TextEditingController _nameCtrl;
   late TextEditingController _minStockCtrl;
-  String _selectedBaseUnit = 'ml'; // Varsayılan
+  String _selectedUnit = 'gr'; // Seçilen görsel birim
 
-  final _units = SeedData.defaultUnits.where((u) => u.baseUnit == u.symbol).map((u) => u.symbol).toSet().toList();
+  final _units = SeedData.defaultUnits.map((u) => u.symbol).toList();
 
   @override
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.ingredient?.name ?? '');
-    _minStockCtrl = TextEditingController(text: widget.ingredient?.minStockLevel.toString() ?? '');
+    
     if (widget.ingredient != null) {
-      _selectedBaseUnit = widget.ingredient!.unit;
+      final baseAmount = widget.ingredient!.minStockLevel;
+      final baseUnit = widget.ingredient!.unit;
+      
+      // Kayıtlı olan miktarı kullanıcıya en uygun birimle göstermek için formatla
+      final formattedString = UnitConversionService.formatAmount(baseAmount, baseUnit);
+      final parts = formattedString.split(' ');
+      
+      _minStockCtrl = TextEditingController(text: parts[0]);
+      _selectedUnit = parts.length > 1 ? parts[1] : baseUnit;
+    } else {
+      _minStockCtrl = TextEditingController();
     }
   }
 
@@ -50,9 +61,16 @@ class _StockEditScreenState extends ConsumerState<StockEditScreen> {
         ..avgCost = widget.ingredient?.avgCost ?? 0.0
         ..aliases = widget.ingredient?.aliases;
 
+      final inputAmount = double.tryParse(_minStockCtrl.text.replaceAll(',', '.')) ?? 0.0;
+      
+      // Kullanıcının girdiği birimi temel birime dönüştür
+      final baseAmount = UnitConversionService.toBaseAmount(inputAmount, _selectedUnit);
+      final unitDef = UnitConversionService.getUnit(_selectedUnit);
+
       item.name = _nameCtrl.text.trim();
-      item.unit = _selectedBaseUnit;
-      item.minStockLevel = double.tryParse(_minStockCtrl.text) ?? 0.0;
+      // Her zaman arka planda baseUnit (gr, ml, adet) birimini koruyoruz.
+      item.unit = unitDef?.baseUnit ?? _selectedUnit; 
+      item.minStockLevel = baseAmount;
 
       await service.addOrUpdateIngredient(item);
 
@@ -123,29 +141,29 @@ class _StockEditScreenState extends ConsumerState<StockEditScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                initialValue: _selectedBaseUnit,
+                initialValue: _selectedUnit,
                 decoration: const InputDecoration(
-                  labelText: 'Temel Birim',
-                  helperText: 'Stok takibi her zaman temel birim ile (gr, ml, adet) yapılır.',
+                  labelText: 'Birim',
+                  helperText: 'KG, LT gibi birimleri seçerseniz miktar çarpılıp gram/ml olarak saklanır.',
                 ),
                 items: _units.map((u) {
                   return DropdownMenuItem(value: u, child: Text(u.toUpperCase()));
                 }).toList(),
-                onChanged: isEditing // Düzenlerken birim değiştirilmesi risklidir ama izin verebiliriz veya kapatabiliriz
+                onChanged: isEditing 
                     ? null
                     : (val) {
                         setState(() {
-                          _selectedBaseUnit = val!;
+                          _selectedUnit = val!;
                         });
                       },
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _minStockCtrl,
-                keyboardType: TextInputType.number,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   labelText: 'Kritik Stok Uyarı Seviyesi',
-                  suffixText: _selectedBaseUnit,
+                  suffixText: _selectedUnit,
                 ),
                 validator: (val) => val == null || val.isEmpty ? 'Kritik seviye boş olamaz' : null,
               ),
