@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../purchases/ocr_scan_screen.dart';
 import '../budget/budget_screen.dart';
+import '../../providers/budget_provider.dart';
+import '../../models/budget_snapshot.dart';
 import '../../providers/sales_provider.dart';
 import '../../providers/stock_provider.dart';
 import '../../core/utils/unit_conversion.dart';
@@ -25,6 +27,7 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final salesAsync = ref.watch(salesProvider);
     final ingredientsAsync = ref.watch(ingredientsProvider);
+    final budgetAsync = ref.watch(monthlyBudgetSnapshotProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final now = DateTime.now();
@@ -35,10 +38,18 @@ class DashboardScreen extends ConsumerWidget {
         title: Text(
           'Özet', 
           style: TextStyle(
-            fontWeight: FontWeight.bold, // font weight bold da daha iyi durur
-            color: colorScheme.primary, // Tema ile uyumlu renk
+            fontWeight: FontWeight.bold,
+            color: colorScheme.primary,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.document_scanner_rounded, color: colorScheme.primary),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OcrScanScreen())),
+            tooltip: 'Fatura / Fiş Tara',
+          ),
+          const SizedBox(width: 8),
+        ],
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
@@ -88,43 +99,15 @@ class DashboardScreen extends ConsumerWidget {
             ),
           ),
 
-          // Quick Actions Title
+          // Budget Summary Projection
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 24.0, bottom: 12.0),
-              child: Text(
-                'Hızlı İşlemler',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
+              padding: const EdgeInsets.all(16.0),
+              child: _buildBudgetSummary(budgetAsync, context),
             ),
           ),
 
-          // Quick Actions Grid
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            sliver: SliverGrid.count(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.5,
-              children: [
-                _buildQuickActionCard(
-                  context: context,
-                  title: 'Fatura / Fiş Tara',
-                  icon: Icons.document_scanner_outlined,
-                  color: colorScheme.primary,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OcrScanScreen())),
-                ),
-                _buildQuickActionCard(
-                  context: context,
-                  title: 'Bütçe Planlama',
-                  icon: Icons.savings_outlined,
-                  color: colorScheme.secondary,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetScreen())),
-                ),
-              ],
-            ),
-          ),
+
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
       ),
@@ -333,55 +316,7 @@ class DashboardScreen extends ConsumerWidget {
 
         return Column(
           children: [
-            // Toplam Stok Değeri Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: colorScheme.surfaceVariant, width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.account_balance_wallet_rounded, color: Colors.green),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Toplam Stok Değeri',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${totalValue.toStringAsFixed(2)} ₺',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
+
 
             // Kritik Stoklar Bölümü
             if (criticals.isNotEmpty) ...[
@@ -468,6 +403,117 @@ class DashboardScreen extends ConsumerWidget {
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, st) => Center(child: Text('Stok verisi alınamadı: $e')),
+    );
+  }
+
+  Widget _buildBudgetSummary(AsyncValue<BudgetSnapshot> budgetAsync, BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return budgetAsync.when(
+      data: (data) {
+        return InkWell(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetScreen())),
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [colorScheme.secondaryContainer.withOpacity(0.9), colorScheme.secondaryContainer.withOpacity(0.4)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: colorScheme.secondary.withOpacity(0.1), width: 1),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Bütçe ve Fon Planlama',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    Icon(Icons.arrow_forward_ios_rounded, size: 16, color: colorScheme.onSurfaceVariant),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.8),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+                        ]
+                      ),
+                      child: Icon(Icons.savings_rounded, color: Colors.amber[700], size: 32),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Bu Ayki Toplam Ciro',
+                            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                          ),
+                          Text(
+                            '${data.totalRevenue.toStringAsFixed(2)} ₺',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '%${(data.budgetRatio * 100).toInt()} Önerilen Hammadde Bütçesi',
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          Text(
+                            '${data.suggestedBudget.toStringAsFixed(2)} ₺',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                     color: Colors.white.withOpacity(0.4),
+                     borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                     children: [
+                        Icon(Icons.info_outline_rounded, size: 16, color: Colors.blue),
+                        SizedBox(width: 8),
+                        Expanded(
+                           child: Text(
+                             'Yeni hammadde alımları için bu bütçeyi kenara ayırmayı düşünebilirsiniz.',
+                             style: TextStyle(fontSize: 11, color: Colors.black87),
+                           ),
+                        ),
+                     ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, st) => Center(child: Text('Bütçe hesaplanamadı: $e')),
     );
   }
 

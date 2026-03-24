@@ -31,8 +31,21 @@ class BudgetService {
   }
 
   // Geçmiş kararları/hesapları sakla (İleride geri dönüp "Şubat'ta ne ayırmıştım?" demek için)
+  // Aynı yıla ve aya ait bütçe varsa üzerine yazar (tekilleştirir)
   Future<void> saveBudgetSnapshot(BudgetSnapshot snapshot) async {
     await isar.writeTxn(() async {
+      final startOfMonth = DateTime(snapshot.date.year, snapshot.date.month, 1);
+      final endOfMonth = DateTime(snapshot.date.year, snapshot.date.month + 1, 0, 23, 59, 59);
+
+      final existing = await isar.budgetSnapshots
+          .filter()
+          .dateBetween(startOfMonth, endOfMonth)
+          .findFirst();
+
+      if (existing != null) {
+        snapshot.id = existing.id; // Mevcut kaydın ID'sini vererek güncelleme yapıyoruz.
+      }
+
       await isar.budgetSnapshots.put(snapshot);
     });
   }

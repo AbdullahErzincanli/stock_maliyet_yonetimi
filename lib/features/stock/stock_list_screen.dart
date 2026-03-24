@@ -94,51 +94,82 @@ class StockListScreen extends ConsumerWidget {
                     ),
                   );
                 }
-                return ListView.builder(
-                  padding: const EdgeInsets.only(top: 4),
-                  itemCount: ingredients.length,
-                  itemBuilder: (context, index) {
-                    final item = ingredients[index];
-                    final isCritical =
-                        item.stockAmount < item.minStockLevel;
-                    final formattedAmount = UnitConversionService
-                        .formatAmount(item.stockAmount, item.unit);
+                final totalValue = ingredients.fold(0.0, (sum, i) => sum + (i.stockAmount * i.avgCost));
 
-                    return Card(
-                      color: isCritical
-                          ? theme.colorScheme.errorContainer
-                          : null,
-                      child: ListTile(
-                        title: Text(item.name,
-                            style: const TextStyle(
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.green.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.account_balance_wallet_rounded, color: Colors.green, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Toplam Stok Değeri',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              '${totalValue.toStringAsFixed(2)} ₺',
+                              style: TextStyle(
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 20)),
-                        subtitle: Text(
-                          'Ort. Maliyet: ${UnitConversionService.formatCost(item.avgCost, item.unit)}',
-                          style: const TextStyle(fontSize: 16),
+                                color: Colors.green[700],
+                              ),
+                            ),
+                          ],
                         ),
-                        trailing: Text(
-                          formattedAmount,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: isCritical
-                                ? theme.colorScheme.error
-                                : theme.colorScheme.primary,
-                          ),
-                        ),
-                        onTap: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) =>
-                                    StockEditScreen(ingredient: item)),
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.only(top: 4),
+                        itemCount: ingredients.length,
+                        itemBuilder: (context, index) {
+                          final item = ingredients[index];
+                          final isCritical = item.stockAmount < item.minStockLevel;
+                          final formattedAmount = UnitConversionService.formatAmount(item.stockAmount, item.unit);
+
+                          return Card(
+                            color: isCritical ? theme.colorScheme.errorContainer : null,
+                            child: ListTile(
+                              title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+                              subtitle: Text(
+                                'Ort. Maliyet: ${UnitConversionService.formatCost(item.avgCost, item.unit)}',
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                              trailing: Text(
+                                formattedAmount,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: isCritical ? theme.colorScheme.error : theme.colorScheme.primary,
+                                ),
+                              ),
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => StockEditScreen(ingredient: item)),
+                                );
+                                ref.invalidate(ingredientsProvider);
+                              },
+                            ),
                           );
-                          ref.invalidate(ingredientsProvider);
                         },
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 );
               },
               loading: () =>
