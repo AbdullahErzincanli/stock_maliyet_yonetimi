@@ -8,6 +8,7 @@ import '../../models/sale.dart';
 import '../../models/purchase.dart';
 import '../../models/purchase_item.dart';
 import '../../models/budget_snapshot.dart';
+import '../../models/report_settings.dart'; // Added
 import 'seed_data.dart';
 
 class IsarService {
@@ -34,6 +35,7 @@ class IsarService {
         PurchaseSchema,
         PurchaseItemSchema,
         BudgetSnapshotSchema,
+        ReportSettingsSchema, // Added
       ],
       directory: dir.path,
     );
@@ -43,6 +45,14 @@ class IsarService {
     if (count == 0) {
       await isar.writeTxn(() async {
         await isar.unitDefinitions.putAll(SeedData.defaultUnits);
+      });
+    }
+
+    // Seed default settings
+    final settingsCount = await isar.reportSettings.count();
+    if (settingsCount == 0) {
+      await isar.writeTxn(() async {
+        await isar.reportSettings.put(ReportSettings()); // id is 1 by default
       });
     }
 
