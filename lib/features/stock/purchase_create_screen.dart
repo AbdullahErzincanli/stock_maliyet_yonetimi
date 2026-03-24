@@ -10,7 +10,10 @@ import '../../core/utils/unit_conversion.dart';
 import '../../core/db/seed_data.dart';
 
 class PurchaseCreateScreen extends ConsumerStatefulWidget {
-  const PurchaseCreateScreen({super.key});
+  final Purchase? purchase;
+  final PurchaseItem? item;
+
+  const PurchaseCreateScreen({super.key, this.purchase, this.item});
 
   @override
   ConsumerState<PurchaseCreateScreen> createState() =>
@@ -26,6 +29,17 @@ class _PurchaseCreateScreenState extends ConsumerState<PurchaseCreateScreen> {
   Ingredient? _selectedIngredient;
   String _selectedUnit = 'gr';
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.purchase != null && widget.item != null) {
+      _marketNameCtrl.text = widget.purchase!.marketName ?? '';
+      _totalPriceCtrl.text = widget.item!.totalPrice.toString().replaceAll('.', ',');
+      _amountCtrl.text = widget.item!.amount.toString().replaceAll('.', ',');
+      // Birim başlangıçta hammadde yüklenince ayarlanacak
+    }
+  }
 
   @override
   void dispose() {
@@ -85,20 +99,32 @@ class _PurchaseCreateScreenState extends ConsumerState<PurchaseCreateScreen> {
           UnitConversionService.toBaseAmount(amount, _selectedUnit);
       final unitPrice = totalPrice / baseAmount;
 
-      final purchase = Purchase()
-        ..date = DateTime.now()
-        ..marketName = _marketNameCtrl.text.trim().isEmpty
-            ? null
-            : _marketNameCtrl.text.trim()
-        ..totalAmount = totalPrice;
-
       final item = PurchaseItem()
         ..ingredientId = _selectedIngredient!.id
         ..amount = baseAmount
         ..unitPrice = unitPrice
         ..totalPrice = totalPrice;
 
-      await purchaseService.savePurchaseAndProcessStock(purchase, [item]);
+      if (widget.purchase != null) {
+        // Düzenleme modu
+        final purchase = widget.purchase!
+          ..marketName = _marketNameCtrl.text.trim().isEmpty
+              ? null
+              : _marketNameCtrl.text.trim()
+          ..totalAmount = totalPrice;
+
+        await purchaseService.updatePurchaseAndProcessStock(purchase, [item]);
+      } else {
+        // Yeni kayıt modu
+        final purchase = Purchase()
+          ..date = DateTime.now()
+          ..marketName = _marketNameCtrl.text.trim().isEmpty
+              ? null
+              : _marketNameCtrl.text.trim()
+          ..totalAmount = totalPrice;
+
+        await purchaseService.savePurchaseAndProcessStock(purchase, [item]);
+      }
 
       if (!mounted) return;
       SnackBarHelper.show(context, 'Satın alım kaydedildi, stok güncellendi');
@@ -119,7 +145,7 @@ class _PurchaseCreateScreenState extends ConsumerState<PurchaseCreateScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Yeni Satın Alım'),
+        title: Text(widget.purchase != null ? 'Satın Alımı Düzenle' : 'Yeni Satın Alım'),
       ),
       body: ingredientsAsync.when(
         data: (ingredients) {
@@ -148,6 +174,12 @@ class _PurchaseCreateScreenState extends ConsumerState<PurchaseCreateScreen> {
           if (_selectedIngredient != null) {
             final match = ingredients.where((i) => i.id == _selectedIngredient!.id);
             _selectedIngredient = match.isNotEmpty ? match.first : null;
+          } else if (widget.item != null) {
+            final match = ingredients.where((i) => i.id == widget.item!.ingredientId);
+            if (match.isNotEmpty) {
+              _selectedIngredient = match.first;
+              _selectedUnit = _selectedIngredient!.unit;
+            }
           }
 
           return SingleChildScrollView(

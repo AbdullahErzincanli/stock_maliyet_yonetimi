@@ -4,6 +4,8 @@ import '../../providers/stock_provider.dart';
 import '../../core/utils/unit_conversion.dart';
 import 'stock_edit_screen.dart';
 import 'purchase_create_screen.dart';
+import 'purchase_list_screen.dart';
+
 
 class StockListScreen extends ConsumerWidget {
   const StockListScreen({super.key});
@@ -157,7 +159,7 @@ class StockListScreen extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -203,8 +205,6 @@ class StockListScreen extends ConsumerWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) {
-                        // OcrScanScreen zaten var, onu import edip kullanabiliriz
-                        // Şimdilik basit bir placeholder
                         return Scaffold(
                           appBar: AppBar(title: const Text('Fiş Tarama')),
                           body: const Center(
@@ -217,6 +217,27 @@ class StockListScreen extends ConsumerWidget {
                       },
                     ),
                   );
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor:
+                      Theme.of(context).colorScheme.tertiaryContainer,
+                  child: const Icon(Icons.history),
+                ),
+                title: const Text('Satın Alım Geçmişi'),
+                subtitle: const Text('Geçmiş satın alımları görün ve düzenleyin'),
+                enabled: true,
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PurchaseListScreen(),
+                    ),
+                  );
+                  ref.invalidate(ingredientsProvider);
                 },
               ),
             ],
