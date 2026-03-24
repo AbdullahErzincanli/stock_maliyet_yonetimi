@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../providers/budget_provider.dart';
 import '../../models/budget_snapshot.dart';
+import '../../providers/report_settings_provider.dart';
 
 class BudgetScreen extends ConsumerStatefulWidget {
   const BudgetScreen({super.key});
@@ -28,48 +29,54 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
     final snapshotsAsync = ref.watch(savedBudgetsProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final settingsAsync = ref.watch(reportSettingsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Bütçe ve Fon Planlama')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Gelecek hammadde alımları için ayırmak istediğiniz bütçeyi planlayın. İster ciroya oranlayarak, ister sabit bir tutar belirleyebilirsiniz.',
-              style: TextStyle(fontSize: 15, fontStyle: FontStyle.italic, color: Colors.grey),
-            ),
-            const SizedBox(height: 24),
+      body: settingsAsync.when(
+        data: (settings) => SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Gelecek hammadde alımları için ayırmak istediğiniz bütçeyi planlayın. İster ciroya oranlayarak, ister sabit bir tutar belirleyebilirsiniz.',
+                style: TextStyle(fontSize: 15, fontStyle: FontStyle.italic, color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
 
-            // Mode Selection
-            SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(
-                  value: false, 
-                  label: Text('Ciro Oranı %'), 
-                  icon: Icon(Icons.calculate_outlined)
-                ),
-                ButtonSegment(
-                  value: true, 
-                  label: Text('Sabit Tutar ₺'), 
-                  icon: Icon(Icons.edit_note)
-                ),
-              ],
-              selected: {_isManual},
-              onSelectionChanged: (Set<bool> selection) {
-                setState(() {
-                  _isManual = selection.first;
-                });
-              },
-            ),
-            const SizedBox(height: 20),
+              // Mode Selection
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(
+                    value: false, 
+                    label: Text('Ciro Oranı %'), 
+                    icon: Icon(Icons.calculate_outlined)
+                  ),
+                  ButtonSegment(
+                    value: true, 
+                    label: Text('Sabit Tutar ₺'), 
+                    icon: Icon(Icons.edit_note)
+                  ),
+                ],
+                selected: {_isManual},
+                onSelectionChanged: (Set<bool> selection) {
+                  setState(() {
+                    _isManual = selection.first;
+                  });
+                },
+              ),
+              const SizedBox(height: 20),
 
-            serviceAsync.when(
-              data: (service) {
-                return FutureBuilder<BudgetSnapshot>(
-                  future: service.calculateProposedBudget(ratio: _ratio),
-                  builder: (context, snapshot) {
+              serviceAsync.when(
+                data: (service) {
+                  return FutureBuilder<BudgetSnapshot>(
+                    future: service.calculateProposedBudget(
+                      ratio: _ratio, 
+                      periodType: settings.periodType, 
+                      startDayOfWeek: settings.startDayOfWeek
+                    ),
+                    builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: Padding(padding: EdgeInsets.all(32.0), child: CircularProgressIndicator()));
                     }
@@ -92,7 +99,7 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
                           children: [
                             if (!_isManual) ...[
                               Text(
-                                'Bu Ayki Toplam Ciro',
+                                settings.periodType == 'weekly' ? 'Bu Dönemki (Haftalık) Toplam Ciro' : 'Bu Ayki Toplam Ciro',
                                 style: TextStyle(fontSize: 14, color: colorScheme.onSurfaceVariant),
                               ),
                               Text(
@@ -281,6 +288,9 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
             ),
           ],
         ),
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, st) => Center(child: Text('Hata: $e')),
       ),
     );
   }

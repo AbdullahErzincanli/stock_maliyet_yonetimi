@@ -8,18 +8,33 @@ class BudgetService {
 
   BudgetService(this.isar, this.salesService);
 
-  // Belirli bir aydaki (varsayılan bu ay) ciroya göre bütçe önerisi hesapla
-  Future<BudgetSnapshot> calculateProposedBudget({double ratio = 0.40, DateTime? targetMonth}) async {
-    final now = targetMonth ?? DateTime.now();
+  // Dinamik periyoda (Örn: haftalık/aylık) göre bütçe önerisi hesapla
+  Future<BudgetSnapshot> calculateProposedBudget({
+    double ratio = 0.40, 
+    String periodType = 'monthly', 
+    int startDayOfWeek = 1
+  }) async {
+    final now = DateTime.now();
     final allSales = await salesService.getAllSales();
     
-    // Sadece o aya ait olanları filtrele
-    final monthSales = allSales.where((s) => s.date.year == now.year && s.date.month == now.month).toList();
+    DateTime start, end;
+    if (periodType == 'weekly') {
+      int currentDay = now.weekday;
+      int diff = currentDay - startDayOfWeek;
+      if (diff < 0) diff += 7;
+      start = now.subtract(Duration(days: diff));
+      start = DateTime(start.year, start.month, start.day);
+      end = DateTime(start.year, start.month, start.day, 23, 59, 59).add(const Duration(days: 6));
+    } else {
+      start = DateTime(now.year, now.month, 1);
+      end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+    }
+    
+    final periodSales = allSales.where((s) => !s.date.isBefore(start) && !s.date.isAfter(end)).toList();
 
-    final totalRevenue = monthSales.fold(0.0, (sum, s) => sum + s.totalSalePrice);
-    final totalCost = monthSales.fold(0.0, (sum, s) => sum + s.totalCost);
+    final totalRevenue = periodSales.fold(0.0, (sum, s) => sum + s.totalSalePrice);
+    final totalCost = periodSales.fold(0.0, (sum, s) => sum + s.totalCost);
 
-    // Ciro bazlı mı yoksa Kar bazlı mı ayrılacak? Genelde cironun X yüzdesi ayrılır (örn: %40)
     final suggestedBudget = totalRevenue * ratio;
 
     return BudgetSnapshot()

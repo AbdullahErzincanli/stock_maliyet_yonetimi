@@ -147,7 +147,7 @@ class _ReportSettingsScreenState extends ConsumerState<ReportSettingsScreen> {
           ),
           const Divider(),
           SwitchListTile(
-            title: const Text('Rapor Satışlarında Saat Bilgisi Göster'),
+            title: const Text('Satış Raporlarında Saat Bilgisi Göster'),
             subtitle: const Text('Satış kaydedilen saatleri de listeye ekleyin.'),
             value: _settings.showTime,
             onChanged: (val) {

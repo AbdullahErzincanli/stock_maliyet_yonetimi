@@ -11,6 +11,7 @@ import '../../providers/stock_provider.dart';
 import '../../core/utils/unit_conversion.dart';
 import '../../models/sale.dart';
 import '../../models/ingredient.dart';
+import '../../providers/report_settings_provider.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -90,6 +91,17 @@ class DashboardScreen extends ConsumerWidget {
               child: _buildTodaySalesSummary(salesAsync, context),
             ),
           ),
+
+          // Period Settings Calculation Summary
+          SliverToBoxAdapter(
+            child: ref.watch(reportSettingsProvider).when(
+              data: (settings) => _buildPeriodSalesSummary(salesAsync, settings, context),
+              loading: () => const Center(child: Padding(padding: EdgeInsets.all(16.0), child: CircularProgressIndicator())),
+              error: (e, st) => const SizedBox.shrink(),
+            ),
+          ),
+          
+          const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
           // Stock Status / Warnings
           SliverToBoxAdapter(
@@ -254,6 +266,151 @@ class DashboardScreen extends ConsumerWidget {
         ),
     ];
   }
+
+  Widget _buildPeriodSalesSummary(AsyncValue<List<Sale>> salesAsync, dynamic settings, BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final now = DateTime.now();
+
+    DateTime start, end;
+    if (settings.periodType == 'weekly') {
+      int currentDay = now.weekday;
+      int diff = currentDay - (settings.startDayOfWeek as int);
+      if (diff < 0) diff += 7;
+      start = now.subtract(Duration(days: diff));
+      start = DateTime(start.year, start.month, start.day);
+      end = DateTime(start.year, start.month, start.day, 23, 59, 59).add(const Duration(days: 6));
+    } else {
+      start = DateTime(now.year, now.month, 1);
+      end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+    }
+
+    return salesAsync.when(
+      data: (sales) {
+        final periodSales = sales.where((s) => !s.date.isBefore(start) && !s.date.isAfter(end)).toList();
+        final revenue = periodSales.fold(0.0, (sum, s) => sum + s.totalSalePrice);
+        final cost = periodSales.fold(0.0, (sum, s) => sum + s.totalCost);
+        final profit = revenue - cost;
+
+        final isWeekly = settings.periodType == 'weekly';
+        final titleText = isWeekly ? 'Bu Haftaki Performans' : 'Bu Ayki Performans';
+        final subtitleText = '${DateFormat('dd/MM').format(start)} - ${DateFormat('dd/MM').format(end)} Arası';
+
+        final bool hasData = revenue > 0 || cost > 0;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [colorScheme.secondaryContainer.withOpacity(0.9), colorScheme.secondaryContainer.withOpacity(0.4)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: colorScheme.secondary.withOpacity(0.1), width: 1),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       children: [
+                         Text(titleText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                         const SizedBox(height: 2),
+                         Text(subtitleText, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                       ]
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: colorScheme.secondary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${periodSales.length} Satış',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.secondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _buildKpiGridItem('Gelir', revenue, Icons.arrow_upward_rounded, Colors.green),
+                          const SizedBox(height: 12),
+                          _buildKpiGridItem('Maliyet', cost, Icons.arrow_downward_rounded, Colors.orange),
+                          const SizedBox(height: 12),
+                          _buildKpiGridItem(
+                            profit >= 0 ? 'Net Kâr' : 'Net Zarar', 
+                            profit.abs(), 
+                            profit >= 0 ? Icons.trending_up : Icons.trending_down, 
+                            profit >= 0 ? Colors.teal : Colors.red
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (hasData) ...[
+                      const SizedBox(width: 16),
+                      SizedBox(
+                        height: 140,
+                        width: 140,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            PieChart(
+                              PieChartData(
+                                sectionsSpace: 3,
+                                centerSpaceRadius: 40,
+                                startDegreeOffset: -90,
+                                sections: _getPieSections(cost, profit, colorScheme),
+                              ),
+                            ),
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Kâr Oranı',
+                                  style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
+                                ),
+                                Text(
+                                  revenue > 0 ? '%${((profit / revenue) * 100).toStringAsFixed(0)}' : '%0',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: profit >= 0 ? Colors.teal : Colors.red,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                       ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (e, st) => const SizedBox.shrink(),
+    );
+  }
+
+
 
   Widget _buildKpiGridItem(String label, double value, IconData icon, Color color) {
     return Container(
