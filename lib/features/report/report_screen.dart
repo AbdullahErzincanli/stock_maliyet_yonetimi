@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:printing/printing.dart';
+import 'package:gal/gal.dart';
 
 import '../../providers/sales_provider.dart';
 import '../../providers/product_provider.dart';
@@ -65,11 +66,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     }).toList();
   }
 
-  Future<void> _generateAndSharePDF(BuildContext context, List<Sale> sales, String monthKey, Map<int, String> prodNames, bool showProfitAndCost, bool showTime) async {
+  Future<pw.Document> _buildPDF(List<Sale> sales, String monthKey, Map<int, String> prodNames, bool showProfitAndCost, bool showTime) async {
     final pdf = pw.Document();
-    final box = context.findRenderObject() as RenderBox?;
-    final shareOrigin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
-
+    
     // Load fonts for Turkish character and currency support
     final regularFont = await PdfGoogleFonts.robotoRegular();
     final boldFont = await PdfGoogleFonts.robotoBold();
@@ -111,27 +110,41 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
           bold: boldFont,
         ),
         pageFormat: PdfPageFormat.a4,
+        margin: pw.EdgeInsets.zero, // Sayfa kenar boşluklarını sıfırla
         build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text('Stok ve Maliyet Yönetimi - $monthKey Satış Raporu', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 20),
-              pw.Text('Toplam Gelir: ${totalRevenue.toStringAsFixed(2)} TL'),
-              if (showProfitAndCost) ...[
-                pw.Text('Toplam Uretim Maliyeti: ${totalCost.toStringAsFixed(2)} TL'),
-                pw.Text('Net Kar/Zarar: ${totalProfit.toStringAsFixed(2)} TL'),
+          return pw.Container(
+            color: PdfColors.white, // Beyaz arka plan
+            padding: const pw.EdgeInsets.all(32), // Kenar boşluklarını buraya ekle
+            width: double.infinity,
+            height: double.infinity,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Stok ve Maliyet Yönetimi - $monthKey Satış Raporu', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 20),
+                pw.Text('Toplam Gelir: ${totalRevenue.toStringAsFixed(2)} TL'),
+                if (showProfitAndCost) ...[
+                  pw.Text('Toplam Uretim Maliyeti: ${totalCost.toStringAsFixed(2)} TL'),
+                  pw.Text('Net Kar/Zarar: ${totalProfit.toStringAsFixed(2)} TL'),
+                ],
+                pw.SizedBox(height: 20),
+                pw.TableHelper.fromTextArray(
+                  headers: headers,
+                  data: data,
+                ),
               ],
-              pw.SizedBox(height: 20),
-              pw.TableHelper.fromTextArray(
-                headers: headers,
-                data: data,
-              ),
-            ],
+            ),
           );
         },
       ),
     );
+    return pdf;
+  }
+
+  Future<void> _generateAndSharePDF(BuildContext context, List<Sale> sales, String monthKey, Map<int, String> prodNames, bool showProfitAndCost, bool showTime) async {
+    final box = context.findRenderObject() as RenderBox?;
+    final shareOrigin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+    final pdf = await _buildPDF(sales, monthKey, prodNames, showProfitAndCost, showTime);
 
     final output = await getTemporaryDirectory();
     final fileName = 'Rapor_${monthKey.replaceAll('/', '_')}.pdf';
@@ -145,6 +158,73 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
         sharePositionOrigin: shareOrigin,
       ),
     );
+  }
+
+  Future<void> _generateAndShareImage(BuildContext context, List<Sale> sales, String monthKey, Map<int, String> prodNames, bool showProfitAndCost, bool showTime) async {
+    final box = context.findRenderObject() as RenderBox?;
+    final shareOrigin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+    final pdf = await _buildPDF(sales, monthKey, prodNames, showProfitAndCost, showTime);
+
+    final bytes = await pdf.save();
+    final List<XFile> files = [];
+    final output = await getTemporaryDirectory();
+    int pageNum = 1;
+
+    await for (final page in Printing.raster(bytes)) {
+      final pngBytes = await page.toPng();
+      final fileName = 'Rapor_${monthKey.replaceAll('/', '_')}_sayfa$pageNum.png';
+      final file = File('${output.path}/$fileName');
+      await file.writeAsBytes(pngBytes);
+      files.add(XFile(file.path));
+      pageNum++;
+    }
+
+    if (files.isEmpty) return;
+
+    await SharePlus.instance.share(
+      ShareParams(
+        files: files,
+        text: '$monthKey Dönemi Satış Raporu Görseli',
+        sharePositionOrigin: shareOrigin,
+      ),
+    );
+  }
+
+  Future<void> _savePDFToDevice(List<Sale> sales, String monthKey, Map<int, String> prodNames, bool showProfitAndCost, bool showTime) async {
+    final pdf = await _buildPDF(sales, monthKey, prodNames, showProfitAndCost, showTime);
+    await Printing.layoutPdf(
+      onLayout: (_) => pdf.save(),
+      name: 'Rapor_${monthKey.replaceAll('/', '_')}',
+    );
+  }
+
+  Future<void> _saveImageToDevice(BuildContext context, List<Sale> sales, String monthKey, Map<int, String> prodNames, bool showProfitAndCost, bool showTime) async {
+    final pdf = await _buildPDF(sales, monthKey, prodNames, showProfitAndCost, showTime);
+    final bytes = await pdf.save();
+    int count = 0;
+
+    final hasAccess = await Gal.hasAccess();
+    if (!hasAccess) {
+      final granted = await Gal.requestAccess();
+      if (!granted && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Galeriye erişim izni verilmedi.')),
+        );
+        return;
+      }
+    }
+
+    await for (final page in Printing.raster(bytes)) {
+      final pngBytes = await page.toPng();
+      await Gal.putImageBytes(pngBytes, name: 'Rapor_${monthKey.replaceAll('/', '_')}_$count');
+      count++;
+    }
+
+    if (count > 0 && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$count Görsel Galeriye Kaydedildi.')),
+      );
+    }
   }
 
   @override
@@ -208,9 +288,55 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                         childrenPadding: const EdgeInsets.all(8),
                         trailing: Builder(
                           builder: (btnContext) {
-                            return IconButton(
-                              icon: const Icon(Icons.picture_as_pdf, color: Colors.red),
-                              onPressed: () => _generateAndSharePDF(btnContext, mSales, key, prodNames, settings.showProfitAndCost, settings.showTime),
+                            return PopupMenuButton<String>(
+                              icon: const Icon(Icons.share, color: Colors.blue),
+                              tooltip: 'Seçenekler',
+                              onSelected: (value) {
+                                if (value == 'pdf') {
+                                  _generateAndSharePDF(btnContext, mSales, key, prodNames, settings.showProfitAndCost, settings.showTime);
+                                } else if (value == 'image') {
+                                  _generateAndShareImage(btnContext, mSales, key, prodNames, settings.showProfitAndCost, settings.showTime);
+                                } else if (value == 'save_pdf') {
+                                  _savePDFToDevice(mSales, key, prodNames, settings.showProfitAndCost, settings.showTime);
+                                } else if (value == 'save_image') {
+                                  _saveImageToDevice(btnContext, mSales, key, prodNames, settings.showProfitAndCost, settings.showTime);
+                                }
+                              },
+                              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                                const PopupMenuItem<String>(
+                                  value: 'pdf',
+                                  child: ListTile(
+                                    leading: Icon(Icons.picture_as_pdf, color: Colors.red),
+                                    title: Text('PDF Olarak Paylaş'),
+                                    dense: true,
+                                  ),
+                                ),
+                                const PopupMenuItem<String>(
+                                  value: 'image',
+                                  child: ListTile(
+                                    leading: Icon(Icons.image, color: Colors.green),
+                                    title: Text('Görsel Olarak Paylaş (PNG)'),
+                                    dense: true,
+                                  ),
+                                ),
+                                const PopupMenuDivider(),
+                                const PopupMenuItem<String>(
+                                  value: 'save_pdf',
+                                  child: ListTile(
+                                    leading: Icon(Icons.download, color: Colors.blue),
+                                    title: Text('Telefona Kaydet (PDF)'),
+                                    dense: true,
+                                  ),
+                                ),
+                                const PopupMenuItem<String>(
+                                  value: 'save_image',
+                                  child: ListTile(
+                                    leading: Icon(Icons.save_alt, color: Colors.blue),
+                                    title: Text('Telefona Kaydet (Görsel)'),
+                                    dense: true,
+                                  ),
+                                ),
+                              ],
                             );
                           }
                         ),
