@@ -11,7 +11,7 @@ class SalesService {
   SalesService(this.isar, this.productService, this.productionService);
 
   // Satış Kaydı Oluşturan Fonksiyon
-  Future<void> recordSale({
+  Future<String?> recordSale({
     required int productId,
     required double amount, // Satılan miktar (Örn: 5 kg)
     required double unitSalePrice, // Birim satış fiyatı (Örn: 10 TL / kg)
@@ -36,36 +36,25 @@ class SalesService {
       ..note = note
       ..quantity = quantity;
 
+    String? warning;
+
     await isar.writeTxn(() async {
-      // 2. Eğer "Otomatik Üret" seçiliyse, satışı yaparken stoktan hammaddeleri de düş.
-      if (autoProduce) {
-        // recordProduction methodu içinde kendi writeTxn bloğu yoksa veya 
-        // iç içe writeTxn çağırılamayacağı için doğrudan mantığı buraya da koyabiliriz.
-        // Ama isar.writeTxn iç içe destekler (eğer aynı txn kullanılabiliyorsa).
-        // En temiz yol, autoProduce varsa önce stoktan düşmeyi denemek, 
-        // hata verirse Sale kaydolmayacaktır.
-      }
-      
-      // isar.writeTxn içinde kendi writeTxn fonksiyonu hata verebilir, bu yüzden 
-      // kaydetme işlemini ayırıyoruz
       await isar.sales.put(sale);
     });
 
     if (autoProduce) {
-      // Not: Isar iç içe writeTxn'i desteklemediğinden, stok düşme işlemini Transaction dışına aldım. 
-      // Stok düşme başarısız olursa, catch bloğunda bu satışı geri almak iyi bir pratik olabilir, 
-      // ancak şimdilik ProductionService kendisini ayrı bir işlem olarak yönetecek.
-      // Eger exception firlarsa, ust katmanda (UI) isar.sales.delete cagirarak islem rollback edilebilir.
       try {
-        await productionService.recordProduction(productId, amount * quantity);
+        warning = await productionService.recordProduction(productId, amount * quantity);
       } catch (e) {
-        // Hammadde yetersizse Satış kaydını da iptal ediyoruz (Manuel Rollback)
+        // Genel bir hata (Örn: Reçete bulunamadı) durumunda isterseniz rollback yapabilirsiniz:
         await isar.writeTxn(() async {
           await isar.sales.delete(sale.id);
         });
         rethrow;
       }
     }
+
+    return warning;
   }
 
   // Tüm satış geçmişini getir

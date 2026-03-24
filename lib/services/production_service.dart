@@ -11,15 +11,17 @@ class ProductionService {
   ProductionService(this.isar, this.productService);
 
   // Üretim yap: (Atomik olarak reçete x miktar kadar hammaddeden düş)
-  Future<void> recordProduction(int productId, double productionAmount) async {
+  Future<String?> recordProduction(int productId, double productionAmount) async {
     final recipeItems = await productService.getRecipeItemsForProduct(productId);
     
     if (recipeItems.isEmpty) {
       throw Exception('Bu ürünün reçetesi (içeriği) bulunmamaktadır.');
     }
 
+    String? warning;
+
     await isar.writeTxn(() async {
-      // 1. Önce tüm hammaddelerin yeterli olup olmadığını kontrol et (Atomik işlem)
+      // 1. Önce hammaddeleri kontrol et ve uyarı oluştur (Engelleme yapmıyoruz)
       for (var item in recipeItems) {
         final ingredient = await isar.ingredients.get(item.ingredientId);
         if (ingredient == null) {
@@ -28,13 +30,13 @@ class ProductionService {
 
         final neededAmount = item.amount * productionAmount;
         if (ingredient.stockAmount < neededAmount) {
-          final missing = neededAmount - ingredient.stockAmount;
-          final formattedMissing = UnitConversionService.formatAmount(missing, ingredient.unit);
-          throw StockInsufficientException('${ingredient.name} stoğu yetersiz: $formattedMissing eksik');
+          warning = (warning == null) 
+            ? 'Stoklarınız düşük/eksiye düştü (${ingredient.name})' 
+            : '$warning, ${ingredient.name}';
         }
       }
 
-      // 2. Yeterli stok varsa hepsinden düş
+      // 2. Stokları düşür (Eksiye düşmesine artık izin veriyoruz)
       for (var item in recipeItems) {
         final ingredient = (await isar.ingredients.get(item.ingredientId))!;
         final neededAmount = item.amount * productionAmount;
@@ -43,6 +45,8 @@ class ProductionService {
         await isar.ingredients.put(ingredient);
       }
     });
+
+    return warning;
   }
 
   // Anlık tam maliyeti al

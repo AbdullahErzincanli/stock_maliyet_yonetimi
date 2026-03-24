@@ -67,7 +67,7 @@ class _SaleCreateScreenState extends ConsumerState<SaleCreateScreen> {
     final salesService = await ref.read(salesServiceProvider.future);
 
     try {
-      await salesService.recordSale(
+      final warning = await salesService.recordSale(
         productId: _selectedProduct!.id,
         amount: amount,
         unitSalePrice: price,
@@ -77,7 +77,19 @@ class _SaleCreateScreenState extends ConsumerState<SaleCreateScreen> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Satış başarıyla kaydedildi.'), backgroundColor: Colors.green));
+
+      if (warning != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Satış Kaydedildi. UYARI:\n$warning'), 
+            backgroundColor: Colors.orange[800],
+            duration: const Duration(seconds: 5),
+          )
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Satış başarıyla kaydedildi.'), backgroundColor: Colors.green));
+      }
+
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
