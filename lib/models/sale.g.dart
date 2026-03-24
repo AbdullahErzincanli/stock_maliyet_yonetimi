@@ -42,18 +42,23 @@ const SaleSchema = CollectionSchema(
       name: r'profit',
       type: IsarType.double,
     ),
-    r'totalCost': PropertySchema(
+    r'quantity': PropertySchema(
       id: 5,
+      name: r'quantity',
+      type: IsarType.long,
+    ),
+    r'totalCost': PropertySchema(
+      id: 6,
       name: r'totalCost',
       type: IsarType.double,
     ),
     r'totalSalePrice': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'totalSalePrice',
       type: IsarType.double,
     ),
     r'unitSalePrice': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'unitSalePrice',
       type: IsarType.double,
     )
@@ -98,9 +103,10 @@ void _saleSerialize(
   writer.writeString(offsets[2], object.note);
   writer.writeLong(offsets[3], object.productId);
   writer.writeDouble(offsets[4], object.profit);
-  writer.writeDouble(offsets[5], object.totalCost);
-  writer.writeDouble(offsets[6], object.totalSalePrice);
-  writer.writeDouble(offsets[7], object.unitSalePrice);
+  writer.writeLong(offsets[5], object.quantity);
+  writer.writeDouble(offsets[6], object.totalCost);
+  writer.writeDouble(offsets[7], object.totalSalePrice);
+  writer.writeDouble(offsets[8], object.unitSalePrice);
 }
 
 Sale _saleDeserialize(
@@ -116,9 +122,10 @@ Sale _saleDeserialize(
   object.note = reader.readStringOrNull(offsets[2]);
   object.productId = reader.readLong(offsets[3]);
   object.profit = reader.readDouble(offsets[4]);
-  object.totalCost = reader.readDouble(offsets[5]);
-  object.totalSalePrice = reader.readDouble(offsets[6]);
-  object.unitSalePrice = reader.readDouble(offsets[7]);
+  object.quantity = reader.readLong(offsets[5]);
+  object.totalCost = reader.readDouble(offsets[6]);
+  object.totalSalePrice = reader.readDouble(offsets[7]);
+  object.unitSalePrice = reader.readDouble(offsets[8]);
   return object;
 }
 
@@ -140,10 +147,12 @@ P _saleDeserializeProp<P>(
     case 4:
       return (reader.readDouble(offset)) as P;
     case 5:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 6:
       return (reader.readDouble(offset)) as P;
     case 7:
+      return (reader.readDouble(offset)) as P;
+    case 8:
       return (reader.readDouble(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -662,6 +671,58 @@ extension SaleQueryFilter on QueryBuilder<Sale, Sale, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Sale, Sale, QAfterFilterCondition> quantityEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'quantity',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Sale, Sale, QAfterFilterCondition> quantityGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'quantity',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Sale, Sale, QAfterFilterCondition> quantityLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'quantity',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Sale, Sale, QAfterFilterCondition> quantityBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'quantity',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<Sale, Sale, QAfterFilterCondition> totalCostEqualTo(
     double value, {
     double epsilon = Query.epsilon,
@@ -914,6 +975,18 @@ extension SaleQuerySortBy on QueryBuilder<Sale, Sale, QSortBy> {
     });
   }
 
+  QueryBuilder<Sale, Sale, QAfterSortBy> sortByQuantity() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'quantity', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Sale, Sale, QAfterSortBy> sortByQuantityDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'quantity', Sort.desc);
+    });
+  }
+
   QueryBuilder<Sale, Sale, QAfterSortBy> sortByTotalCost() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'totalCost', Sort.asc);
@@ -1024,6 +1097,18 @@ extension SaleQuerySortThenBy on QueryBuilder<Sale, Sale, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Sale, Sale, QAfterSortBy> thenByQuantity() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'quantity', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Sale, Sale, QAfterSortBy> thenByQuantityDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'quantity', Sort.desc);
+    });
+  }
+
   QueryBuilder<Sale, Sale, QAfterSortBy> thenByTotalCost() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'totalCost', Sort.asc);
@@ -1093,6 +1178,12 @@ extension SaleQueryWhereDistinct on QueryBuilder<Sale, Sale, QDistinct> {
     });
   }
 
+  QueryBuilder<Sale, Sale, QDistinct> distinctByQuantity() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'quantity');
+    });
+  }
+
   QueryBuilder<Sale, Sale, QDistinct> distinctByTotalCost() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'totalCost');
@@ -1146,6 +1237,12 @@ extension SaleQueryProperty on QueryBuilder<Sale, Sale, QQueryProperty> {
   QueryBuilder<Sale, double, QQueryOperations> profitProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'profit');
+    });
+  }
+
+  QueryBuilder<Sale, int, QQueryOperations> quantityProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'quantity');
     });
   }
 

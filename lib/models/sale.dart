@@ -13,4 +13,5 @@ class Sale {
   late double profit;
   late DateTime date;
   String? note;
+  int quantity = 1; // Satış adedi (Örn: 3 adet 5kg luk peksemet için 3)
 }

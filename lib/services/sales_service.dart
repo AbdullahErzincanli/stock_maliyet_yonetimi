@@ -13,15 +13,16 @@ class SalesService {
   // Satış Kaydı Oluşturan Fonksiyon
   Future<void> recordSale({
     required int productId,
-    required double amount, // Satılan miktar
-    required double unitSalePrice, // Birim satış fiyatı
-    required bool autoProduce, // Satarken otomatik olarak stoğu (hammaddeleri) düşürsün mü?
+    required double amount, // Satılan miktar (Örn: 5 kg)
+    required double unitSalePrice, // Birim satış fiyatı (Örn: 10 TL / kg)
+    required bool autoProduce,
+    int quantity = 1, // Satış Adedi (Örn: 3 adet 5kg)
     String? note,
   }) async {
     // 1. Maliyet hesapla (Üretim maliyeti: Reçete o anki maliyeti x Satılan Miktar)
     final unitCost = await productService.calculateProductCost(productId);
-    final totalCost = unitCost * amount;
-    final totalSalePrice = unitSalePrice * amount;
+    final totalCost = unitCost * amount * quantity;
+    final totalSalePrice = unitSalePrice * amount * quantity;
     final profit = totalSalePrice - totalCost;
 
     final sale = Sale()
@@ -32,7 +33,8 @@ class SalesService {
       ..totalCost = totalCost
       ..profit = profit
       ..date = DateTime.now()
-      ..note = note;
+      ..note = note
+      ..quantity = quantity;
 
     await isar.writeTxn(() async {
       // 2. Eğer "Otomatik Üret" seçiliyse, satışı yaparken stoktan hammaddeleri de düş.
@@ -55,7 +57,7 @@ class SalesService {
       // ancak şimdilik ProductionService kendisini ayrı bir işlem olarak yönetecek.
       // Eger exception firlarsa, ust katmanda (UI) isar.sales.delete cagirarak islem rollback edilebilir.
       try {
-        await productionService.recordProduction(productId, amount);
+        await productionService.recordProduction(productId, amount * quantity);
       } catch (e) {
         // Hammadde yetersizse Satış kaydını da iptal ediyoruz (Manuel Rollback)
         await isar.writeTxn(() async {

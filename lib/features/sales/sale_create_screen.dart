@@ -14,6 +14,7 @@ class SaleCreateScreen extends ConsumerStatefulWidget {
 class _SaleCreateScreenState extends ConsumerState<SaleCreateScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountCtrl = TextEditingController(text: '1');
+  final _quantityCtrl = TextEditingController(text: '1'); // Adet kontolör
   final _priceCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
 
@@ -23,6 +24,7 @@ class _SaleCreateScreenState extends ConsumerState<SaleCreateScreen> {
   @override
   void dispose() {
     _amountCtrl.dispose();
+    _quantityCtrl.dispose();
     _priceCtrl.dispose();
     _noteCtrl.dispose();
     super.dispose();
@@ -57,9 +59,10 @@ class _SaleCreateScreenState extends ConsumerState<SaleCreateScreen> {
     }
 
     final amount = double.tryParse(_amountCtrl.text) ?? 0;
+    final quantity = int.tryParse(_quantityCtrl.text) ?? 1;
     final price = double.tryParse(_priceCtrl.text) ?? 0;
-
-    if (amount <= 0 || price < 0) return;
+    
+    if (amount <= 0 || quantity <= 0 || price < 0) return;
 
     final salesService = await ref.read(salesServiceProvider.future);
 
@@ -68,7 +71,8 @@ class _SaleCreateScreenState extends ConsumerState<SaleCreateScreen> {
         productId: _selectedProduct!.id,
         amount: amount,
         unitSalePrice: price,
-        autoProduce: true, // Her zaman stoktan düşsün
+        autoProduce: true, 
+        quantity: quantity,
         note: _noteCtrl.text,
       );
 
@@ -119,25 +123,35 @@ class _SaleCreateScreenState extends ConsumerState<SaleCreateScreen> {
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: Text('🔍 Bu ürünün güncel tahmini BİRİM maliyeti: ${_currentEstimatedCost.toStringAsFixed(2)} ₺', style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
                     ),
-                  Row(
+                   Row(
                     children: [
                       Expanded(
                         flex: 1,
                         child: TextFormField(
-                          controller: _amountCtrl,
+                          controller: _quantityCtrl,
                           keyboardType: TextInputType.number,
-                          decoration: InputDecoration(labelText: 'Miktar (${_selectedProduct?.unit ?? "Adet/Kutu"})'),
-                          validator: (val) => val == null || val.isEmpty ? 'Gerekli' : null,
+                          decoration: const InputDecoration(labelText: 'Adet'),
+                          validator: (val) => val == null || val.isEmpty || (int.tryParse(val) ?? 0) <= 0 ? 'Hatalı' : null,
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: TextFormField(
+                          controller: _amountCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(labelText: 'Miktar (${_selectedProduct?.unit ?? ""})'),
+                          validator: (val) => val == null || val.isEmpty || (double.tryParse(val) ?? 0) <= 0 ? 'Gerekli' : null,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       Expanded(
                         flex: 2,
                         child: TextFormField(
                           controller: _priceCtrl,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(labelText: 'BİRİM Satış Fiyatı (₺)'),
-                          validator: (val) => val == null || val.isEmpty ? 'Gerekli' : null,
+                          decoration: const InputDecoration(labelText: 'Birim Fiyat'),
+                          validator: (val) => val == null || val.isEmpty || (double.tryParse(val) ?? 0) < 0 ? 'Gerekli' : null,
                         ),
                       ),
                     ],
